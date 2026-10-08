@@ -865,11 +865,38 @@
     }
 
     .current-duration-text {
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 800;
       color: var(--primary-700);
-      min-width: 65px;
+      background: var(--primary-50);
+      border: 1.5px dashed var(--primary-500);
+      border-radius: var(--radius-full);
+      padding: 4px 10px;
+      min-width: 80px;
       text-align: center;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .current-duration-text:hover {
+      background: var(--primary-100);
+      border-style: solid;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(20, 110, 184, 0.2);
+    }
+
+    .current-duration-text:active {
+      transform: scale(0.95);
+    }
+
+    .current-duration-edit-icon {
+      font-size: 11px;
+      opacity: 0.75;
     }
 
     .duration-presets-row {
@@ -877,7 +904,11 @@
       gap: 8px;
       justify-content: center;
       overflow-x: auto;
-      padding-bottom: 2px;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .duration-presets-row::-webkit-scrollbar {
+      display: none;
     }
 
     .preset-chip {
@@ -890,6 +921,7 @@
       color: var(--text-muted);
       cursor: pointer;
       transition: all 0.2s;
+      white-space: nowrap;
     }
 
     .preset-chip:hover {
@@ -901,6 +933,128 @@
       background: var(--primary-100);
       border-color: var(--primary-500);
       color: var(--primary-700);
+    }
+
+    .preset-chip.custom-chip {
+      border: 1px dashed var(--primary-500);
+      color: var(--primary-700);
+      background: var(--primary-50);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .preset-chip.custom-chip:hover {
+      background: var(--primary-100);
+      border-style: solid;
+    }
+
+    /* Modal Atur Durasi Kustom */
+    .custom-duration-input-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin: 18px 0 12px;
+    }
+
+    .custom-input-box {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 6px;
+      background: var(--bg-app);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 10px 18px;
+      transition: all 0.2s;
+    }
+
+    .custom-input-box:focus-within {
+      border-color: var(--primary-500);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(20, 110, 184, 0.15);
+    }
+
+    .custom-input-box input {
+      font-family: var(--font-family);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--primary-700);
+      background: transparent;
+      border: none;
+      width: 75px;
+      text-align: center;
+      outline: none;
+    }
+
+    .custom-input-box input::-webkit-inner-spin-button,
+    .custom-input-box input::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .custom-input-box input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    .custom-input-unit {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .btn-stepper-lg {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-full);
+      border: 1.5px solid var(--border-color);
+      background: #ffffff;
+      color: var(--text-main);
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-stepper-lg:hover {
+      border-color: var(--primary-500);
+      color: var(--primary-700);
+      background: var(--primary-50);
+    }
+
+    .btn-stepper-lg:active {
+      transform: scale(0.92);
+    }
+
+    .modal-quick-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin: 6px 0 16px;
+    }
+
+    .btn-quick-preset {
+      background: var(--bg-app);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-quick-preset:hover,
+    .btn-quick-preset.active {
+      background: var(--primary-100);
+      border-color: var(--primary-500);
+      color: var(--primary-700);
+      font-weight: 700;
     }
 
     /* Tampilan Waktu Besar */
@@ -1780,10 +1934,10 @@
             <div class="customizer-row">
               <span class="customizer-title" id="customizer-mode-title">Durasi Belajar:</span>
               <div class="stepper-wrap">
-                <button type="button" class="btn-stepper" id="btn-decrease-time" title="Kurangi 5 Menit"
+                <button type="button" class="btn-stepper" id="btn-decrease-time" title="Kurangi Waktu"
                   aria-label="Kurangi Waktu">−</button>
-                <span class="current-duration-text" id="display-custom-duration">25 Menit</span>
-                <button type="button" class="btn-stepper" id="btn-increase-time" title="Tambah 5 Menit"
+                <button type="button" class="current-duration-text" id="display-custom-duration" title="Klik untuk ketik durasi kustom" aria-label="Ubah Durasi Kustom">25 Menit <span class="current-duration-edit-icon">✎</span></button>
+                <button type="button" class="btn-stepper" id="btn-increase-time" title="Tambah Waktu"
                   aria-label="Tambah Waktu">+</button>
               </div>
             </div>
@@ -2016,6 +2170,45 @@
           </button>
           <button type="button" class="btn-modal-secondary" id="btn-modal-start-break">
             Mulai Istirahat Santai ☕
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL POPUP BOTTOM SHEET: ATUR DURASI KUSTOM
+         ========================================== -->
+    <div class="modal-overlay" id="modal-custom-duration" role="dialog" aria-modal="true" aria-labelledby="modal-custom-title">
+      <div class="modal-card">
+        <div class="sheet-grab-handle"></div>
+        <div class="modal-badge-icon" id="modal-custom-icon">⏱️</div>
+        <h3 class="modal-title" id="modal-custom-title">Atur Durasi Kustom</h3>
+        <p class="modal-desc" id="modal-custom-desc">
+          Tentukan durasi timer (1 - 180 menit) untuk mode <strong>Fokus Belajar</strong>:
+        </p>
+
+        <div class="custom-duration-input-wrap">
+          <button type="button" class="btn-stepper-lg" id="btn-modal-custom-minus" title="Kurangi 1 Menit" aria-label="Kurangi">−</button>
+          <div class="custom-input-box">
+            <input type="number" id="input-custom-minutes" min="1" max="180" value="25" inputmode="numeric" aria-label="Jumlah Menit">
+            <span class="custom-input-unit">Menit</span>
+          </div>
+          <button type="button" class="btn-stepper-lg" id="btn-modal-custom-plus" title="Tambah 1 Menit" aria-label="Tambah">+</button>
+        </div>
+
+        <div class="modal-quick-presets" id="modal-quick-presets">
+          <!-- Preset cepat dinamis diisi oleh JavaScript -->
+        </div>
+
+        <div class="modal-actions" style="margin-top: 14px;">
+          <button type="button" class="btn-modal-primary" id="btn-save-custom-duration">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Terapkan Durasi
+          </button>
+          <button type="button" class="btn-modal-secondary" id="btn-cancel-custom-duration">
+            Batal
           </button>
         </div>
       </div>
@@ -2488,24 +2681,40 @@
         labelModeBreak.textContent = `Istirahat Santai ${timerConfig.breakMinutes}m`;
 
         customizerModeTitle.textContent = isFocus ? 'Durasi Belajar:' : 'Durasi Istirahat:';
-        displayCustomDuration.textContent = `${currentMins} Menit`;
+        displayCustomDuration.innerHTML = `${currentMins} Menit <span class="current-duration-edit-icon">✎</span>`;
 
-        const presets = isFocus ? FOCUS_PRESETS : BREAK_PRESETS;
+        const basePresets = isFocus ? FOCUS_PRESETS : BREAK_PRESETS;
+        const presets = [...basePresets];
+        if (!presets.includes(currentMins)) {
+          presets.push(currentMins);
+          presets.sort((a, b) => a - b);
+        }
+
         durationPresetsContainer.innerHTML = '';
         presets.forEach(min => {
           const chip = document.createElement('button');
           chip.type = 'button';
           chip.className = `preset-chip ${min === currentMins ? 'active' : ''}`;
           chip.textContent = `${min}m`;
+          chip.title = `Pilih ${min} menit`;
           chip.addEventListener('click', () => {
             setCustomDuration(min);
           });
           durationPresetsContainer.appendChild(chip);
         });
+
+        // Tombol chip + Kustom untuk input angka bebas
+        const customChip = document.createElement('button');
+        customChip.type = 'button';
+        customChip.className = 'preset-chip custom-chip';
+        customChip.innerHTML = '<span>✎</span> Kustom';
+        customChip.title = 'Ketik durasi menit bebas';
+        customChip.addEventListener('click', openCustomDurationModal);
+        durationPresetsContainer.appendChild(customChip);
       }
 
       function setCustomDuration(minutes) {
-        minutes = Math.max(1, Math.min(120, minutes));
+        minutes = Math.max(1, Math.min(180, minutes));
         if (currentTimerMode === 'focus') {
           timerConfig.focusMinutes = minutes;
         } else {
@@ -2514,7 +2723,12 @@
         saveTimerConfig();
         renderCustomizerUI();
 
-        if (!isTimerRunning) {
+        if (isTimerRunning) {
+          pauseTimer();
+          timerDuration = minutes * 60;
+          timerRemaining = timerDuration;
+          updateTimerDisplay();
+        } else {
           timerDuration = minutes * 60;
           timerRemaining = timerDuration;
           updateTimerDisplay();
@@ -2691,6 +2905,99 @@
       modalReflection.addEventListener('click', (e) => {
         if (e.target === modalReflection) {
           modalReflection.classList.remove('active');
+        }
+      });
+
+      // Kontrol Modal Atur Durasi Kustom
+      const modalCustomDuration = document.getElementById('modal-custom-duration');
+      const modalCustomTitle = document.getElementById('modal-custom-title');
+      const modalCustomDesc = document.getElementById('modal-custom-desc');
+      const modalCustomIcon = document.getElementById('modal-custom-icon');
+      const inputCustomMinutes = document.getElementById('input-custom-minutes');
+      const btnModalCustomMinus = document.getElementById('btn-modal-custom-minus');
+      const btnModalCustomPlus = document.getElementById('btn-modal-custom-plus');
+      const modalQuickPresets = document.getElementById('modal-quick-presets');
+      const btnSaveCustomDuration = document.getElementById('btn-save-custom-duration');
+      const btnCancelCustomDuration = document.getElementById('btn-cancel-custom-duration');
+
+      function openCustomDurationModal() {
+        const isFocus = currentTimerMode === 'focus';
+        const currentMins = isFocus ? timerConfig.focusMinutes : timerConfig.breakMinutes;
+
+        modalCustomIcon.textContent = isFocus ? '🎓' : '☕';
+        modalCustomTitle.textContent = isFocus ? 'Durasi Fokus Belajar' : 'Durasi Istirahat Santai';
+        modalCustomDesc.innerHTML = `Tentukan durasi timer (<strong>1 - 180 menit</strong>) untuk mode <strong>${isFocus ? 'Fokus Belajar' : 'Istirahat Santai'}</strong>:`;
+        inputCustomMinutes.value = currentMins;
+
+        const quickList = isFocus ? [15, 20, 25, 30, 45, 50, 60, 90] : [3, 5, 10, 15, 20, 30];
+        modalQuickPresets.innerHTML = '';
+        quickList.forEach(m => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `btn-quick-preset ${m === currentMins ? 'active' : ''}`;
+          btn.textContent = `${m}m`;
+          btn.addEventListener('click', () => {
+            inputCustomMinutes.value = m;
+            modalQuickPresets.querySelectorAll('.btn-quick-preset').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            playTone(450, 'sine', 0.04);
+          });
+          modalQuickPresets.appendChild(btn);
+        });
+
+        modalCustomDuration.classList.add('active');
+        playTone(520, 'sine', 0.08);
+
+        setTimeout(() => {
+          inputCustomMinutes.focus();
+          inputCustomMinutes.select();
+        }, 150);
+      }
+
+      function closeCustomDurationModal() {
+        modalCustomDuration.classList.remove('active');
+      }
+
+      function applyModalCustomDuration() {
+        let val = parseInt(inputCustomMinutes.value, 10);
+        if (isNaN(val) || val < 1) val = 1;
+        if (val > 180) val = 180;
+
+        setCustomDuration(val);
+        closeCustomDurationModal();
+        showToast(`Durasi ${currentTimerMode === 'focus' ? 'fokus' : 'istirahat'} diatur ke ${val} menit`, '⏱️');
+      }
+
+      displayCustomDuration.addEventListener('click', openCustomDurationModal);
+      btnCancelCustomDuration.addEventListener('click', closeCustomDurationModal);
+      btnSaveCustomDuration.addEventListener('click', applyModalCustomDuration);
+
+      modalCustomDuration.addEventListener('click', (e) => {
+        if (e.target === modalCustomDuration) {
+          closeCustomDurationModal();
+        }
+      });
+
+      btnModalCustomMinus.addEventListener('click', () => {
+        let val = parseInt(inputCustomMinutes.value, 10) || 25;
+        val = Math.max(1, val - 1);
+        inputCustomMinutes.value = val;
+        playTone(420, 'sine', 0.03);
+      });
+
+      btnModalCustomPlus.addEventListener('click', () => {
+        let val = parseInt(inputCustomMinutes.value, 10) || 25;
+        val = Math.min(180, val + 1);
+        inputCustomMinutes.value = val;
+        playTone(460, 'sine', 0.03);
+      });
+
+      inputCustomMinutes.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          applyModalCustomDuration();
+        } else if (e.key === 'Escape') {
+          closeCustomDurationModal();
         }
       });
 
