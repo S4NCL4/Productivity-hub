@@ -185,6 +185,43 @@
       background: rgba(255, 255, 255, 0.35);
     }
 
+    .cloud-btn {
+      position: relative;
+    }
+
+    .cloud-status-dot {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .cloud-status-dot.connected {
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+
+    .cloud-status-dot.error {
+      background: #ef4444;
+      box-shadow: 0 0 6px #ef4444;
+    }
+
+    .cloud-status-dot.syncing {
+      background: #f59e0b;
+      box-shadow: 0 0 6px #f59e0b;
+      animation: pulseDot 1.5s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.3); }
+    }
+
     .header-date-greeting {
       display: flex;
       flex-direction: column;
@@ -1808,6 +1845,14 @@
               </svg>
             </button>
 
+            <!-- Cloud Status Button -->
+            <button id="btn-cloud-sync" class="icon-btn-header cloud-btn" title="Firebase Cloud: Menghubungkan..." aria-label="Status Firebase Cloud">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+              </svg>
+              <span class="cloud-status-dot" id="cloud-status-dot"></span>
+            </button>
+
             <!-- Sound Toggle Button -->
             <button id="btn-sound-toggle" class="icon-btn-header" title="Aktifkan/Nonaktifkan Suara"
               aria-label="Toggle Sound">
@@ -2218,13 +2263,18 @@
     <div class="toast-container" id="toast-container"></div>
   </div>
 
+  <!-- Firebase App, Firestore & Auth SDKs (v10 Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
   <!-- Pure JavaScript Logic -->
   <script>
     (function () {
       'use strict';
 
       // ==========================================
-      // 1. STATE & STORAGE MANAGEMENT (LocalStorage)
+      // 1. STATE & STORAGE MANAGEMENT (LocalStorage & Firebase Cloud)
       // ==========================================
       const STORAGE_KEYS = {
         TASKS: 'prodhub_tasks_v1',
@@ -2233,6 +2283,22 @@
         SOUND_ENABLED: 'prodhub_sound_v1',
         TIMER_CONFIG: 'prodhub_timer_config_v1'
       };
+
+      // Konfigurasi Firebase Project
+      const firebaseConfig = {
+        apiKey: "AIzaSyCYemLTj98rTHG66q5nEKydm_Z4VJHglvw",
+        authDomain: "productivityhub-8dfc0.firebaseapp.com",
+        projectId: "productivityhub-8dfc0",
+        storageBucket: "productivityhub-8dfc0.firebasestorage.app",
+        messagingSenderId: "1061075336168",
+        appId: "1:1061075336168:web:c69daeeb0926bd1c17825d",
+        measurementId: "G-8DMWVND379"
+      };
+
+      let db = null;
+      let auth = null;
+      let isFirebaseConnected = false;
+      let cloudStatusMessage = 'Menghubungkan...';
 
       const DEFAULT_TASKS = [
         { id: 1, text: 'Review materi kuliah / kerjaan hari ini', priority: 'high', completed: false, createdAt: Date.now() - 3600000 },
@@ -2270,10 +2336,65 @@
         localStorage.setItem(STORAGE_KEYS.FOCUS_STATS, JSON.stringify(focusStats));
       }
 
-      function saveTasks() { localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks)); }
-      function saveJournals() { localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(journals)); }
-      function saveFocusStats() { localStorage.setItem(STORAGE_KEYS.FOCUS_STATS, JSON.stringify(focusStats)); }
-      function saveTimerConfig() { localStorage.setItem(STORAGE_KEYS.TIMER_CONFIG, JSON.stringify(timerConfig)); }
+      function saveTasks(item = null, action = 'save') {
+        localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+        if (db) {
+          try {
+            if (item && action === 'delete') {
+              db.collection('tasks').doc(String(item.id)).delete().catch(console.warn);
+            } else if (item) {
+              db.collection('tasks').doc(String(item.id)).set(item, { merge: true }).catch(console.warn);
+            } else {
+              tasks.forEach(t => {
+                db.collection('tasks').doc(String(t.id)).set(t, { merge: true }).catch(console.warn);
+              });
+            }
+          } catch (e) {
+            console.warn('Gagal sync task ke Firebase:', e);
+          }
+        }
+      }
+
+      function saveJournals(item = null, action = 'save') {
+        localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(journals));
+        if (db) {
+          try {
+            if (item && action === 'delete') {
+              db.collection('journals').doc(String(item.id)).delete().catch(console.warn);
+            } else if (item) {
+              db.collection('journals').doc(String(item.id)).set(item, { merge: true }).catch(console.warn);
+            } else {
+              journals.forEach(j => {
+                db.collection('journals').doc(String(j.id)).set(j, { merge: true }).catch(console.warn);
+              });
+            }
+          } catch (e) {
+            console.warn('Gagal sync journal ke Firebase:', e);
+          }
+        }
+      }
+
+      function saveFocusStats() {
+        localStorage.setItem(STORAGE_KEYS.FOCUS_STATS, JSON.stringify(focusStats));
+        if (db) {
+          try {
+            db.collection('settings').doc('focusStats').set(focusStats, { merge: true }).catch(console.warn);
+          } catch (e) {
+            console.warn('Gagal sync focusStats ke Firebase:', e);
+          }
+        }
+      }
+
+      function saveTimerConfig() {
+        localStorage.setItem(STORAGE_KEYS.TIMER_CONFIG, JSON.stringify(timerConfig));
+        if (db) {
+          try {
+            db.collection('settings').doc('timerConfig').set(timerConfig, { merge: true }).catch(console.warn);
+          } catch (e) {
+            console.warn('Gagal sync timerConfig ke Firebase:', e);
+          }
+        }
+      }
 
       // ==========================================
       // 2. AUDIO SYNTHESIZER (Native Web Audio API)
@@ -2360,6 +2481,9 @@
       btnSoundToggle.addEventListener('click', () => {
         soundEnabled = !soundEnabled;
         localStorage.setItem(STORAGE_KEYS.SOUND_ENABLED, JSON.stringify(soundEnabled));
+        if (db) {
+          db.collection('settings').doc('preferences').set({ soundEnabled }, { merge: true }).catch(console.warn);
+        }
         updateSoundUI();
         showToast(soundEnabled ? 'Suara diaktifkan 🔔' : 'Suara dinonaktifkan 🔕');
         if (soundEnabled) playTone(600, 'sine', 0.1);
@@ -2560,7 +2684,7 @@
           const toggleCompletionHandler = (e) => {
             e.stopPropagation();
             task.completed = !task.completed;
-            saveTasks();
+            saveTasks(task, 'save');
             renderTasks();
 
             if (task.completed) {
@@ -2579,8 +2703,9 @@
           const deleteBtn = card.querySelector('.btn-delete-task');
           deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            const deletedTask = task;
             tasks = tasks.filter(t => t.id !== task.id);
-            saveTasks();
+            saveTasks(deletedTask, 'delete');
             renderTasks();
             showToast('Tugas berhasil dihapus', '🗑️');
             playTone(300, 'sine', 0.08);
@@ -2604,7 +2729,7 @@
         };
 
         tasks.unshift(newTask);
-        saveTasks();
+        saveTasks(newTask, 'save');
         renderTasks();
 
         taskInput.value = '';
@@ -3072,8 +3197,9 @@
           const deleteBtn = card.querySelector('.btn-delete-journal');
           deleteBtn.addEventListener('click', () => {
             if (confirm('Hapus catatan jurnal ini?')) {
+              const deletedEntry = entry;
               journals = journals.filter(j => j.id !== entry.id);
-              saveJournals();
+              saveJournals(deletedEntry, 'delete');
               renderJournals();
               showToast('Catatan jurnal dihapus', '🗑️');
             }
@@ -3108,7 +3234,7 @@
         };
 
         journals.unshift(newEntry);
-        saveJournals();
+        saveJournals(newEntry, 'save');
         renderJournals();
 
         journalTitle.value = '';
@@ -3243,9 +3369,181 @@
           .replace(/'/g, '&#039;');
       }
 
-      // Initial Renders
+      // ==========================================
+      // 12. FIREBASE REALTIME SYNC & CONTROLS
+      // ==========================================
+      const btnCloudSync = document.getElementById('btn-cloud-sync');
+      const cloudStatusDot = document.getElementById('cloud-status-dot');
+
+      function updateCloudStatus(status, message) {
+        cloudStatusMessage = message;
+        if (!cloudStatusDot) return;
+        cloudStatusDot.classList.remove('connected', 'error', 'syncing');
+        if (status === 'connected') {
+          isFirebaseConnected = true;
+          cloudStatusDot.classList.add('connected');
+          if (btnCloudSync) btnCloudSync.title = `Firebase Cloud: Terhubung (${firebaseConfig.projectId})`;
+        } else if (status === 'error') {
+          isFirebaseConnected = false;
+          cloudStatusDot.classList.add('error');
+          if (btnCloudSync) btnCloudSync.title = `Firebase Cloud: Offline / Mode Lokal (${message})`;
+        } else {
+          isFirebaseConnected = false;
+          cloudStatusDot.classList.add('syncing');
+          if (btnCloudSync) btnCloudSync.title = `Firebase Cloud: ${message}`;
+        }
+      }
+
+      if (btnCloudSync) {
+        btnCloudSync.addEventListener('click', () => {
+          if (isFirebaseConnected) {
+            showToast(`☁️ Firebase Aktif & Tersinkron (${firebaseConfig.projectId})`, '☁️');
+          } else {
+            showToast(`☁️ Status Cloud: ${cloudStatusMessage}`, '⚠️');
+          }
+        });
+      }
+
+      function setupFirestoreListeners() {
+        if (!db) return;
+        updateCloudStatus('syncing', 'Menghubungkan ke Cloud Firestore...');
+
+        // 1. Sinkronisasi Realtime Koleksi Tasks
+        db.collection('tasks').onSnapshot(snapshot => {
+          updateCloudStatus('connected', `Tersinkron (${firebaseConfig.projectId})`);
+          if (snapshot.empty) {
+            if (tasks && tasks.length > 0) {
+              tasks.forEach(t => {
+                db.collection('tasks').doc(String(t.id)).set(t, { merge: true }).catch(console.warn);
+              });
+            }
+          } else {
+            const cloudTasks = [];
+            snapshot.forEach(doc => {
+              const data = doc.data();
+              if (data && data.id) {
+                cloudTasks.push(data);
+              }
+            });
+            cloudTasks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            tasks = cloudTasks;
+            localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+            renderTasks();
+          }
+        }, err => {
+          console.warn('Firestore tasks listener notice:', err);
+          updateCloudStatus('error', err.message);
+        });
+
+        // 2. Sinkronisasi Realtime Koleksi Journals
+        db.collection('journals').onSnapshot(snapshot => {
+          if (snapshot.empty) {
+            if (journals && journals.length > 0) {
+              journals.forEach(j => {
+                db.collection('journals').doc(String(j.id)).set(j, { merge: true }).catch(console.warn);
+              });
+            }
+          } else {
+            const cloudJournals = [];
+            snapshot.forEach(doc => {
+              const data = doc.data();
+              if (data && data.id) {
+                cloudJournals.push(data);
+              }
+            });
+            cloudJournals.sort((a, b) => (b.id || 0) - (a.id || 0));
+            journals = cloudJournals;
+            localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(journals));
+            renderJournals();
+          }
+        }, err => {
+          console.warn('Firestore journals listener notice:', err);
+        });
+
+        // 3. Sinkronisasi Realtime Konfigurasi Timer Pomodoro
+        db.collection('settings').doc('timerConfig').onSnapshot(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (data && data.focusMinutes && data.breakMinutes) {
+              timerConfig = {
+                focusMinutes: Number(data.focusMinutes),
+                breakMinutes: Number(data.breakMinutes)
+              };
+              localStorage.setItem(STORAGE_KEYS.TIMER_CONFIG, JSON.stringify(timerConfig));
+              renderCustomizerUI();
+              if (!isTimerRunning) {
+                timerDuration = (currentTimerMode === 'focus' ? timerConfig.focusMinutes : timerConfig.breakMinutes) * 60;
+                timerRemaining = timerDuration;
+                updateTimerDisplay();
+              }
+            }
+          } else {
+            db.collection('settings').doc('timerConfig').set(timerConfig, { merge: true }).catch(console.warn);
+          }
+        }, console.warn);
+
+        // 4. Sinkronisasi Realtime Statistik Fokus
+        db.collection('settings').doc('focusStats').onSnapshot(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (data && data.lastDate === new Date().toDateString()) {
+              focusStats = {
+                minutes: Number(data.minutes || 0),
+                sessions: Number(data.sessions || 0),
+                lastDate: data.lastDate
+              };
+              localStorage.setItem(STORAGE_KEYS.FOCUS_STATS, JSON.stringify(focusStats));
+              updateStatsDisplay();
+            }
+          } else {
+            db.collection('settings').doc('focusStats').set(focusStats, { merge: true }).catch(console.warn);
+          }
+        }, console.warn);
+
+        // 5. Sinkronisasi Preferensi Suara
+        db.collection('settings').doc('preferences').onSnapshot(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (typeof data.soundEnabled === 'boolean' && data.soundEnabled !== soundEnabled) {
+              soundEnabled = data.soundEnabled;
+              localStorage.setItem(STORAGE_KEYS.SOUND_ENABLED, JSON.stringify(soundEnabled));
+              updateSoundUI();
+            }
+          }
+        }, console.warn);
+      }
+
+      function initFirebase() {
+        if (typeof firebase === 'undefined') {
+          console.warn('Firebase SDK belum termuat atau jaringan offline.');
+          updateCloudStatus('error', 'SDK tidak termuat');
+          return;
+        }
+
+        try {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+          }
+          db = firebase.firestore();
+          auth = firebase.auth();
+
+          if (auth) {
+            auth.signInAnonymously().catch(err => {
+              console.log('Firebase Auth notice (non-fatal):', err.message);
+            });
+          }
+
+          setupFirestoreListeners();
+        } catch (e) {
+          console.error('Firebase initialization error:', e);
+          updateCloudStatus('error', e.message);
+        }
+      }
+
+      // Initial Renders & Inisialisasi Firebase Cloud
       renderTasks();
       renderJournals();
+      initFirebase();
 
     })();
   </script>
